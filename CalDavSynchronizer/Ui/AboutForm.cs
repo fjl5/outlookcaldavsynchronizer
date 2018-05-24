@@ -107,5 +107,10 @@ namespace CalDavSynchronizer.Ui
         ExceptionHandler.Instance.DisplayException (x, s_logger);
       }
     }
+
+    private void label2_Click(object sender, EventArgs e)
+    {
+
+    }
   }
 }
