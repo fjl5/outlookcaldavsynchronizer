@@ -240,10 +240,54 @@ namespace CalDavSynchronizer
       // through the general options dialog, as it is not so general after all...
       if (generalOptions.AutoconfigureKolab)
       {
+        UpgradeKolabDefaults(options);
         AutoconfigureKolab(options, generalOptions);
       }
 
       _oneTimeTaskRunner = new OneTimeTaskRunner(_outlookSession);
+    }
+
+    // Fix former default...
+    private void UpgradeKolabDefaults(Options[] options)
+    {
+      // Make sure we can use all address books als outlook list
+      GenericComObjectWrapper<Folder> defaultAddressBookFolder = new GenericComObjectWrapper<Folder>(Globals.ThisAddIn.Application.Session.GetDefaultFolder(OlDefaultFolders.olFolderContacts) as Folder);
+      foreach (Folder folder in defaultAddressBookFolder.Inner.Folders)
+      {
+        folder.ShowAsOutlookAB = true;
+      }
+      // Set "Global Address Book (Kolab)" as the default address list.
+      foreach (AddressList al in _session.AddressLists)
+      {
+        if (al.Name == "Globales Adressbuch (Kolab)")
+        {
+          // We need to set it in the registry, as there does not seem to exist an appropriate API
+          string regPath =
+            @"Software\Microsoft\Office\" + Globals.ThisAddIn.Application.Version.Split(new char[] { '.' })[0] + @".0" +
+            @"\Outlook\Profiles\" + _session.CurrentProfileName +
+            @"\9207f3e0a3b11019908b08002b2a56c2";
+          var key = Registry.CurrentUser.OpenSubKey(regPath, true);
+          if (key != null)
+          {
+            // Turn ID into byte array
+            byte[] bytes = new byte[al.ID.Length / 2];
+            for (int i = 0; i < al.ID.Length; i += 2)
+              bytes[i / 2] = Convert.ToByte(al.ID.Substring(i, 2), 16);
+            key.SetValue("01023d06", bytes);
+          }
+        }
+      }
+      // Make ldap-based resources read only
+      foreach (var option in options)
+      {
+        if (
+          option.ProfileTypeOrNull == "Kolab" && option.MappingConfiguration is ContactMappingConfiguration &&
+          (option.CalenderUrl.EndsWith("/ldap-directory/") || option.CalenderUrl.EndsWith("/ldap-resources/"))
+        )
+        {
+          option.SynchronizationMode = SynchronizationMode.ReplicateServerIntoOutlook;
+        }
+      }
     }
 
     private async void AutoconfigureKolab(Options[] options, GeneralOptions generalOptions)
@@ -286,7 +330,7 @@ namespace CalDavSynchronizer
       // Do this only if we really have a response from the server.
       if (serverResources.ContainsResources)
       {
-        var allUris = 
+        var allUris =
           serverResources.Calendars.Select(c => c.Uri.ToString()).Concat(
           serverResources.AddressBooks.Select(a => a.Uri.ToString())).Concat(
           serverResources.TaskLists.Select(d => d.Id)).ToArray();
