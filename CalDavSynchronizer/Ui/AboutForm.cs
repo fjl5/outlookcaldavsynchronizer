@@ -43,7 +43,7 @@ namespace CalDavSynchronizer.Ui
       _checkForUpdatesButton.Text = Strings.Get($"Check for Updates");
       Text = Strings.Get($"About");
 
-      _versionLabel.Text = Strings.Get($"Version: {Assembly.GetExecutingAssembly().GetName().Version}");
+      _versionLabel.Text = Strings.Get($"Version: {Assembly.GetExecutingAssembly().GetName().Version}, CoreBiz patchlevel {Properties.Resources.CbPatchlevel}");
 
       this._linkLabelProject.Text = WebResourceUrls.ProjectHomeSite.ToString();
 
