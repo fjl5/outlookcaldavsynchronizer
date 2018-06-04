@@ -73,6 +73,26 @@ namespace CalDavSynchronizer.Properties {
         /// <summary>
         ///   Looks up a localized resource of type System.Drawing.Icon similar to (Icon).
         /// </summary>
+        internal static System.Drawing.Icon AddressbookReadOnly {
+            get {
+                object obj = ResourceManager.GetObject("AddressbookReadOnly", resourceCulture);
+                return ((System.Drawing.Icon)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Icon similar to (Icon).
+        /// </summary>
+        internal static System.Drawing.Icon AddressbookReadWrite {
+            get {
+                object obj = ResourceManager.GetObject("AddressbookReadWrite", resourceCulture);
+                return ((System.Drawing.Icon)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Icon similar to (Icon).
+        /// </summary>
         internal static System.Drawing.Icon ApplicationIcon {
             get {
                 object obj = ResourceManager.GetObject("ApplicationIcon", resourceCulture);
@@ -87,6 +107,26 @@ namespace CalDavSynchronizer.Properties {
             get {
                 object obj = ResourceManager.GetObject("ApplicationLogoLarge", resourceCulture);
                 return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Icon similar to (Icon).
+        /// </summary>
+        internal static System.Drawing.Icon CalendarReadOnly {
+            get {
+                object obj = ResourceManager.GetObject("CalendarReadOnly", resourceCulture);
+                return ((System.Drawing.Icon)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Icon similar to (Icon).
+        /// </summary>
+        internal static System.Drawing.Icon CalendarReadWrite {
+            get {
+                object obj = ResourceManager.GetObject("CalendarReadWrite", resourceCulture);
+                return ((System.Drawing.Icon)(obj));
             }
         }
         
@@ -156,6 +196,26 @@ namespace CalDavSynchronizer.Properties {
             get {
                 object obj = ResourceManager.GetObject("SyncReport", resourceCulture);
                 return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Icon similar to (Icon).
+        /// </summary>
+        internal static System.Drawing.Icon TasklistReadOnly {
+            get {
+                object obj = ResourceManager.GetObject("TasklistReadOnly", resourceCulture);
+                return ((System.Drawing.Icon)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Icon similar to (Icon).
+        /// </summary>
+        internal static System.Drawing.Icon TasklistReadWrite {
+            get {
+                object obj = ResourceManager.GetObject("TasklistReadWrite", resourceCulture);
+                return ((System.Drawing.Icon)(obj));
             }
         }
     }
