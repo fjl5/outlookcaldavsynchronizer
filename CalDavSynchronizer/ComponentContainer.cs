@@ -355,9 +355,9 @@ namespace CalDavSynchronizer
               deletedCalendarFolder.Inner.Name = folder.Inner.Name + markDeleted;
               deletedCalendarFolder.Inner.Description = folder.Inner.Description;
               folder.Inner.Description = "";
-              foreach (var item in folder.Inner.Items)
-                if (item is AppointmentItem)
-                  (item as AppointmentItem).Move(deletedCalendarFolder.Inner);
+              foreach (var innerItem in folder.Inner.Items)
+                using (var item = GenericComObjectWrapper.Create(innerItem))
+                   (item as AppointmentItem)?.Move(deletedCalendarFolder.Inner);
               deletedCalendarFolder.Inner.Delete();
             }
             else
@@ -424,6 +424,28 @@ namespace CalDavSynchronizer
                 PictureDispConverter.ToIPictureDisp(Resources.CalendarReadWrite) as stdole.StdPicture);
             }
             catch { }
+          }
+          // Quick and Dirty: On shared and read-only calendars, don't sync reminders
+          if (resource.ReadOnly || resource.Name.StartsWith("(") || resource.Name.StartsWith("shared » "))
+          {
+            var eventMappingOptions = (EventMappingConfiguration)option.MappingConfiguration;
+            if (eventMappingOptions.MapReminder != ReminderMapping.@false)
+            {
+              eventMappingOptions.MapReminder = ReminderMapping.@false;
+              // Remove local reminders.
+              foreach (var innerItem in folder.Inner.Items)
+              {
+                using (var item = GenericComObjectWrapper.Create(innerItem))
+                {
+                  if (item.Inner is AppointmentItem)
+                  {
+                    (item.Inner as AppointmentItem).ReminderSet = false;
+                    (item.Inner as AppointmentItem).ReminderMinutesBeforeStart = 0;
+                    (item.Inner as AppointmentItem).Save();
+                  }
+                }
+              }
+            }
           }
         }
       }
