@@ -131,7 +131,7 @@ namespace CalDavSynchronizer.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to 23.
+        ///   Looks up a localized string similar to 24.
         /// </summary>
         internal static string CbPatchlevel {
             get {

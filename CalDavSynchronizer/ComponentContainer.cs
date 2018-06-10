@@ -222,7 +222,13 @@ namespace CalDavSynchronizer
       // Set the registry key "HKEY_CURRENT_USER\Software\CalDavSynchronizer\AutoconfigureKolab"
       // to "1" to enable the Kolab autoconfigure feature. This setting is not available
       // through the general options dialog, as it is not so general after all...
-      if (generalOptions.AutoconfigureKolab)
+      bool haveImap = false;
+      foreach (var innerAccount in _session.Accounts)
+        using (var account = GenericComObjectWrapper.Create(innerAccount))
+          if ((account.Inner as Account)?.AccountType == OlAccountType.olImap)
+            haveImap = true;
+
+      if (haveImap && generalOptions.AutoconfigureKolab)
       {
         UpgradeKolabDefaults(options);
         AutoconfigureKolab(options, generalOptions);
