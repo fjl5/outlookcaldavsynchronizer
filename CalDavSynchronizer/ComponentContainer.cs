@@ -219,21 +219,6 @@ namespace CalDavSynchronizer
 
       _trayNotifier = generalOptions.EnableTrayIcon ? new TrayNotifier (this) : NullTrayNotifer.Instance;
 
-      // Set the registry key "HKEY_CURRENT_USER\Software\CalDavSynchronizer\AutoconfigureKolab"
-      // to "1" to enable the Kolab autoconfigure feature. This setting is not available
-      // through the general options dialog, as it is not so general after all...
-      bool haveImap = false;
-      foreach (var innerAccount in _session.Accounts)
-        using (var account = GenericComObjectWrapper.Create(innerAccount))
-          if ((account.Inner as Account)?.AccountType == OlAccountType.olImap)
-            haveImap = true;
-
-      if (haveImap && generalOptions.AutoconfigureKolab)
-      {
-        UpgradeKolabDefaults(options);
-        AutoconfigureKolab(options, generalOptions);
-      }
-
       try
       {
         using (var syncObjects = GenericComObjectWrapper.Create (_session.SyncObjects))
@@ -249,6 +234,29 @@ namespace CalDavSynchronizer
       catch (COMException ex)
       {
         s_logger.Error ("Can't access SyncObjects", ex);
+      }
+
+      // Set the registry key "HKEY_CURRENT_USER\Software\CalDavSynchronizer\AutoconfigureKolab"
+      // to "1" to enable the Kolab autoconfigure feature. This setting is not available
+      // through the general options dialog, as it is not so general after all...
+      bool haveImap = false;
+      foreach (var innerAccount in _session.Accounts)
+        using (var account = GenericComObjectWrapper.Create(innerAccount))
+          if ((account.Inner as Account)?.AccountType == OlAccountType.olImap)
+            haveImap = true;
+
+      if (haveImap && generalOptions.AutoconfigureKolab)
+      {
+        try
+        {
+          UpgradeKolabDefaults(options);
+          AutoconfigureKolab(options, generalOptions);
+        }
+        catch (COMException ex)
+        {
+          s_logger.Error("Error during autoconfigure", ex);
+          MessageBox.Show(Strings.Get($"Error during autoconfigure") + ":\n".ToString() + ex.ToString(), MessageBoxTitle);
+        }
       }
 
       _oneTimeTaskRunner = new OneTimeTaskRunner(_outlookSession);
