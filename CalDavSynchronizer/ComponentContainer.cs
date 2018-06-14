@@ -265,12 +265,13 @@ namespace CalDavSynchronizer
     // Fix former default...
     private void UpgradeKolabDefaults(Options[] options)
     {
+      s_logger.Info("Upgrade some Kolab defaults");
       // Make sure we can use all address books als outlook list
       GenericComObjectWrapper<Folder> defaultAddressBookFolder = new GenericComObjectWrapper<Folder>(Globals.ThisAddIn.Application.Session.GetDefaultFolder(OlDefaultFolders.olFolderContacts) as Folder);
-      foreach (Folder folder in defaultAddressBookFolder.Inner.Folders)
-      {
-        folder.ShowAsOutlookAB = true;
-      }
+      foreach (var innerFolder in defaultAddressBookFolder.Inner.Folders)
+        using (var folder = new GenericComObjectWrapper<Folder>(innerFolder as Folder))
+          folder.Inner.ShowAsOutlookAB = true;
+
       // Set "Global Address Book (Kolab)" as the default address list.
       foreach (AddressList al in _session.AddressLists)
       {
@@ -292,25 +293,17 @@ namespace CalDavSynchronizer
           }
         }
       }
-      // Make ldap-based resources read only
-      foreach (var option in options)
-      {
-        if (
-          option.ProfileTypeOrNull == "Kolab" && option.MappingConfiguration is ContactMappingConfiguration &&
-          (option.CalenderUrl.EndsWith("/ldap-directory/") || option.CalenderUrl.EndsWith("/ldap-resources/"))
-        )
-        {
-          option.SynchronizationMode = SynchronizationMode.ReplicateServerIntoOutlook;
-        }
-      }
     }
 
     private async void AutoconfigureKolab(Options[] options, GeneralOptions generalOptions)
     {
+      s_logger.Info("Starting Kolab autoconfigure");
+      string profileType = "Kolab";
       // Make sure the add-on language is active in our context
       Thread.CurrentThread.CurrentUICulture = new CultureInfo(GeneralOptionsDataAccess.CultureName);
+      // Remove all Kolab options without Outlook folder, so we can recreate them
+      options = options.Where(o => o.ProfileTypeOrNull != profileType || o.OutlookFolderEntryId != null).ToArray();
       // Create all objects required to use the options collection models
-      string profileType = "Kolab";
       string[] categories;
       using (var categoriesWrapper = GenericComObjectWrapper.Create(_session.Categories))
         categories = categoriesWrapper.Inner.ToSafeEnumerable<Category>().Select(c => c.Name).ToArray();
@@ -340,6 +333,7 @@ namespace CalDavSynchronizer
       kolabOptionsModel.OnlyAddNewUrls = true;
       kolabOptionsModel.AutoConfigure = true;
       kolabOptionsModel.GetAccountSettingsCommand.Execute(null);
+      s_logger.Debug("Discover CalDAV/CardDAV resources");
       var serverResources = await kolabOptionsModel.DiscoverResourcesAsync();
       var newOptions = optionsCollectionModel.GetOptionsCollection();
 
@@ -347,6 +341,7 @@ namespace CalDavSynchronizer
       // Do this only if we really have a response from the server.
       if (serverResources.ContainsResources)
       {
+        s_logger.Debug("Removing all resources that are no longer available");
         var allUris =
           serverResources.Calendars.Select(c => c.Uri.ToString()).Concat(
           serverResources.AddressBooks.Select(a => a.Uri.ToString())).Concat(
@@ -360,10 +355,12 @@ namespace CalDavSynchronizer
             remainingOptions.Add(option);
           else
           {
+            s_logger.Info($"Removing Resource '{option.Name}'");
             GenericComObjectWrapper<Folder> folder = new GenericComObjectWrapper<Folder>(
               Globals.ThisAddIn.Application.Session.GetFolderFromID(option.OutlookFolderEntryId) as Folder);
             if (folder.Inner.EntryID == defaultCalendarFolder.Inner.EntryID)
             {
+              s_logger.Info($"We can't delete '{option.Name}', so move all entries to a new folder and mark this folder als deleted.");
               // As we can't rename the default folder, create a new folder and move all appointment entries
               var deletedCalendarFolder = new GenericComObjectWrapper<Folder>(defaultCalendarFolder.Inner.Folders.Add(folder.Inner.Name + markDeleted, OlDefaultFolders.olFolderCalendar) as Folder);
               deletedCalendarFolder.Inner.Name = folder.Inner.Name + markDeleted;
@@ -389,20 +386,27 @@ namespace CalDavSynchronizer
         // - Sync Outlook default calendar
         var defaultCalendarResource = serverResources.Calendars.FirstOrDefault(c => c.IsDefault);
         var defaultCalendarFolderIsMapped = newOptions.Any(o => o.OutlookFolderEntryId == defaultCalendarFolder.Inner.EntryID);
+        if (defaultCalendarFolderIsMapped) { s_logger.Debug($"Found existing mapping for default folder."); }
         if (defaultCalendarResource != null && !defaultCalendarFolderIsMapped)
         {
+          s_logger.Info($"New Default CalDAV folder '{defaultCalendarResource.Name}' detected.");
           var defaultCalendarMapping = newOptions.FirstOrDefault(m => m.CalenderUrl == defaultCalendarResource.Uri.ToString());
           if (defaultCalendarMapping?.OutlookFolderEntryId != defaultCalendarFolder.Inner.EntryID)
           {
             // Delete existing folder
             GenericComObjectWrapper<Folder> folder = new GenericComObjectWrapper<Folder>(
               Globals.ThisAddIn.Application.Session.GetFolderFromID(defaultCalendarMapping.OutlookFolderEntryId) as Folder);
+            s_logger.Info($"Delete existing folder '{folder.Inner.Name}' for Mapping '{defaultCalendarMapping.Name}'");
             folder.Inner.Name += markDeleted;
             try {
               // Deleting a folder that has just been created might fail
               folder.Inner.Delete();
-            } catch { }
+            }
+            catch {
+              s_logger.Info($"Could not move folder '{folder.Inner.Name}' to trash");
+            }
             // Map to Outlook default folder
+            s_logger.Debug($"Route mapping '{defaultCalendarMapping.Name}' to folder '{defaultCalendarFolder.Inner.Name}'");
             defaultCalendarMapping.OutlookFolderEntryId = defaultCalendarFolder.Inner.EntryID;
             defaultCalendarMapping.OutlookFolderStoreId = defaultCalendarFolder.Inner.StoreID;
           }
@@ -412,11 +416,13 @@ namespace CalDavSynchronizer
       // Update existing Kolab Calendar resources
       foreach (var resource in serverResources.Calendars)
       {
-        foreach (var option in newOptions.Where(o => o.CalenderUrl == resource.Uri.ToString())) {
+        s_logger.Debug($"Update calendar '{resource.Name}'");
+        foreach (var option in newOptions.Where(o => o.OutlookFolderEntryId != null && o.CalenderUrl == resource.Uri.ToString())) {
           GenericComObjectWrapper<Folder> folder = new GenericComObjectWrapper<Folder>(
             Globals.ThisAddIn.Application.Session.GetFolderFromID(option.OutlookFolderEntryId) as Folder);
           if (resource.ReadOnly)
           {
+            s_logger.Debug($"Calendar '{resource.Name}' is read-only");
             option.SynchronizationMode = SynchronizationMode.ReplicateServerIntoOutlook;
             folder.Inner.Description = Strings.Get($"Read-only calendar") + $" »{option.Name}«:\n" + Strings.Get($"local changes made in Outlook are discarded and replaced by data from the server.");
             try
@@ -429,6 +435,7 @@ namespace CalDavSynchronizer
           }
           else
           {
+            s_logger.Debug($"Calendar '{resource.Name}' is read-write");
             option.SynchronizationMode = SynchronizationMode.MergeInBothDirections;
             folder.Inner.Description = Strings.Get($"Read-write calendar") + $" »{option.Name}«:\n" + Strings.Get($"local changes made in Outlook and remote changes from the server are merged.");
             try
@@ -442,6 +449,7 @@ namespace CalDavSynchronizer
           // Quick and Dirty: On shared and read-only calendars, don't sync reminders
           if (resource.ReadOnly || resource.Name.StartsWith("(") || resource.Name.StartsWith("shared » "))
           {
+            s_logger.Debug($"Calendar '{resource.Name}' is read-only or shared");
             var eventMappingOptions = (EventMappingConfiguration)option.MappingConfiguration;
             if (eventMappingOptions.MapReminder != ReminderMapping.@false)
             {
@@ -467,7 +475,8 @@ namespace CalDavSynchronizer
       // Update existing Kolab Address book resources
       foreach (var resource in serverResources.AddressBooks)
       {
-        foreach (var option in newOptions.Where(o => o.CalenderUrl == resource.Uri.ToString()))
+        s_logger.Debug($"Update address book '{resource.Name}'");
+        foreach (var option in newOptions.Where(o => o.OutlookFolderEntryId != null && o.CalenderUrl == resource.Uri.ToString()))
         {
           GenericComObjectWrapper<Folder> folder = new GenericComObjectWrapper<Folder>(
             Globals.ThisAddIn.Application.Session.GetFolderFromID(option.OutlookFolderEntryId) as Folder);
@@ -491,7 +500,8 @@ namespace CalDavSynchronizer
       // Update existing Kolab Task list resources
       foreach (var resource in serverResources.TaskLists)
       {
-        foreach (var option in newOptions.Where(o => o.CalenderUrl == resource.Id))
+        s_logger.Debug($"Update task list '{resource.Name}'");
+        foreach (var option in newOptions.Where(o => o.OutlookFolderEntryId != null && o.CalenderUrl == resource.Id))
         {
           GenericComObjectWrapper<Folder> folder = new GenericComObjectWrapper<Folder>(
             Globals.ThisAddIn.Application.Session.GetFolderFromID(option.OutlookFolderEntryId) as Folder);
@@ -512,7 +522,7 @@ namespace CalDavSynchronizer
         }
       }
 
-      // Set free/busy URL in Registry
+      // Set free/busy URL in Registry if not yet set
       string regPath =
         @"Software\Microsoft\Office\" + Globals.ThisAddIn.Application.Version.Split(new char[] { '.' })[0] + @".0" +
         @"\Outlook\\Options\Calendar\Internet Free/Busy";
@@ -522,6 +532,7 @@ namespace CalDavSynchronizer
       var value = key.GetValue("Read URL");
       if (value == null || string.IsNullOrEmpty(value.ToString()))
       {
+        s_logger.Info("Set free/busy URL");
         ServerSettingsTemplateViewModel server = kolabOptionsModel.ServerSettingsViewModel as ServerSettingsTemplateViewModel;
         if (!string.IsNullOrEmpty(server.CalenderUrl))
         {
@@ -531,6 +542,7 @@ namespace CalDavSynchronizer
       }
 
       // Save new settings
+      s_logger.Debug("Save autoconfigured settings");
       await ApplyNewOptions(options, newOptions, generalOptions, optionsCollectionModel.GetOneTimeTasks());
     }
 
