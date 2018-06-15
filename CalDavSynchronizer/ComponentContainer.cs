@@ -75,7 +75,7 @@ namespace CalDavSynchronizer
 {
   public class ComponentContainer : IComponentContainer, IReportsViewModelParent, ISynchronizationReportSink
   {
-    public const string MessageBoxTitle = "CalDav Synchronizer";
+    public const string MessageBoxTitle = "CoreBiz Outlook Connector";
     private static readonly ILog s_logger = LogManager.GetLogger (System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
     // ReSharper disable once ConvertToConstant.Local
     private static readonly int c_requiredEntityCacheVersion = 3;
@@ -125,7 +125,7 @@ namespace CalDavSynchronizer
       if (comWrapperFactory == null) throw new ArgumentNullException(nameof(comWrapperFactory));
 
       s_logger.Info ("Startup...");
-      s_logger.Info ($"Version: {Assembly.GetExecutingAssembly().GetName().Version}-CB.{Properties.Resources.CbPatchlevel}");
+      s_logger.Info ($"Version: {Assembly.GetExecutingAssembly().GetName().Version}");
       s_logger.Info ($"Operating system: {Environment.OSVersion}");
 
       _profileTypeRegistry = ProfileTypeRegistry.Instance;
@@ -414,7 +414,7 @@ namespace CalDavSynchronizer
       }
 
       // Update existing Kolab Calendar resources
-      foreach (var resource in serverResources.Calendars)
+      foreach (var resource in serverResources.Calendars ?? Enumerable.Empty<CalendarData>())
       {
         s_logger.Debug($"Update calendar '{resource.Name}'");
         foreach (var option in newOptions.Where(o => o.OutlookFolderEntryId != null && o.CalenderUrl == resource.Uri.ToString())) {
@@ -473,7 +473,7 @@ namespace CalDavSynchronizer
       }
 
       // Update existing Kolab Address book resources
-      foreach (var resource in serverResources.AddressBooks)
+      foreach (var resource in serverResources.AddressBooks ?? Enumerable.Empty<AddressBookData>())
       {
         s_logger.Debug($"Update address book '{resource.Name}'");
         foreach (var option in newOptions.Where(o => o.OutlookFolderEntryId != null && o.CalenderUrl == resource.Uri.ToString()))
@@ -498,7 +498,7 @@ namespace CalDavSynchronizer
       }
 
       // Update existing Kolab Task list resources
-      foreach (var resource in serverResources.TaskLists)
+      foreach (var resource in serverResources.TaskLists ?? Enumerable.Empty<TaskListData>())
       {
         s_logger.Debug($"Update task list '{resource.Name}'");
         foreach (var option in newOptions.Where(o => o.OutlookFolderEntryId != null && o.CalenderUrl == resource.Id))

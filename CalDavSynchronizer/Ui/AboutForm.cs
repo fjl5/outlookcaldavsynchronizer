@@ -43,7 +43,36 @@ namespace CalDavSynchronizer.Ui
       _checkForUpdatesButton.Text = Strings.Get($"Check for Updates");
       Text = Strings.Get($"About");
 
-      _versionLabel.Text = Strings.Get($"Version: {Assembly.GetExecutingAssembly().GetName().Version}, CoreBiz patchlevel {Properties.Resources.CbPatchlevel}");
+      _captionLabel.Text = "CoreBiz Outlook Connector";
+      _licenseTextBox.Text = @"Outlook Connector by LIS Engineering
+Based on CalDavSynchronizer (http://caldavsynchronizer.org/)
+Changes in Outlook Connector by CoreBiz patchlevels:
+28:
+- Change versioning to include CoreBiz patchlevel in Assembly version number
+27:
+- Stability improvements
+26:
+- Remove stale profiles (referring to a missing outlook folder)
+- Fix crashes on stale profiles
+- Extended logging
+25:
+- Stability improvements
+24:
+- Only try autoconfigure if there is an IMAP account
+23:
+- Don't sync reminders on shared and read-only resources
+- Shared calendars are detected by name (starts with 'shared' or opening parentheses)
+- Stability improvements
+22:
+- Update mapping of default Kolab calendar and Outlook calendar folder
+21:
+- Sync Kolab default calendar with Outlook default folder
+20 and before:
+- Implement Kolab profiles
+- Implement Kolab autoconfigure
+" + "\r\n" + _licenseTextBox.Text;
+      var version = Assembly.GetExecutingAssembly().GetName().Version;
+      _versionLabel.Text = Strings.Get($"Version: {version.Major}.{version.Minor}.{version.Build}, CoreBiz patchlevel {version.Revision}");
 
       this._linkLabelProject.Text = WebResourceUrls.ProjectHomeSite.ToString();
 

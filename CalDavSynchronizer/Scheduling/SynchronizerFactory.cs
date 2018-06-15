@@ -348,7 +348,7 @@ namespace CalDavSynchronizer.Scheduling
     private static Tuple<string, string> GetProductAndVersion ()
     {
       var version = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
-      return Tuple.Create ("CalDavSynchronizer", $"{version}-CB.{Properties.Resources.CbPatchlevel}");
+      return Tuple.Create ("CalDavSynchronizer", $"{version.Major}.{version.Minor}.{version.Build}-CB.{version.Revision}");
     }
 
     private static string GetProductWithVersion ()
