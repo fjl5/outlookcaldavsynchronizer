@@ -32,5 +32,5 @@ using System.Runtime.InteropServices;
 // You can specify all the values or you can default the Build and Revision Numbers 
 // by using the '*' as shown below:
 // [assembly: AssemblyVersion("1.0.*")]
-// We use the Revision as CoreBiz patchlevel
-[assembly: AssemblyVersion ("3.2.0.28")]
+// We use the Revision Number as CoreBiz patchlevel. The Installer has 3.2.30
+[assembly: AssemblyVersion ("3.2.0.30")]

@@ -47,6 +47,13 @@ namespace CalDavSynchronizer.Ui
       _licenseTextBox.Text = @"Outlook Connector by LIS Engineering
 Based on CalDavSynchronizer (http://caldavsynchronizer.org/)
 Changes in Outlook Connector by CoreBiz patchlevels:
+30:
+- Improve installer
+29:
+- Gracefully handle 'unable to create folder' situations
+- Add fallback for situations where outlook does not allow names with dots
+- Don't show dialog boxes on autoconfigure as this delays add-in initialization
+- Improve debug / info / error log
 28:
 - Change versioning to include CoreBiz patchlevel in Assembly version number
 27:
